@@ -7,8 +7,6 @@ import InfinityLogoImg from "@/components/shared/InfinityLogoImg";
 import { BRAND } from "@/lib/helpers";
 import { setDemoMode } from "@/lib/demoMode";
 
-const DEMO_EMAIL = "demo@aileverageautomation.com";
-const DEMO_PASSWORD = process.env.NEXT_PUBLIC_DEMO_PASSWORD ?? "";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -33,22 +31,10 @@ export default function LoginPage() {
     }
   }
 
-  async function handleDemoLogin() {
-    setError(null);
+  function handleDemoLogin() {
     setDemoLoading(true);
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({
-      email: DEMO_EMAIL,
-      password: DEMO_PASSWORD,
-    });
-    if (error) {
-      setError("Demo login unavailable. Please try again later.");
-      setDemoLoading(false);
-    } else {
-      setDemoMode(true);
-      router.push("/dashboard");
-      router.refresh();
-    }
+    setDemoMode(true);
+    router.push("/dashboard");
   }
 
   const inp: React.CSSProperties = {

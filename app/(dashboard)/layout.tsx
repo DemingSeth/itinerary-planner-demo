@@ -1,12 +1,15 @@
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import DashboardShell from "./DashboardShell";
+import DemoOrLoginGate from "./DemoOrLoginGate";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user) redirect("/login");
+  if (!user) {
+    // No auth session — let the client decide: demo mode or redirect to /login
+    return <DemoOrLoginGate>{children}</DemoOrLoginGate>;
+  }
 
   const { data: tourHost } = await supabase
     .from("tour_hosts")
@@ -14,7 +17,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .eq("id", user.id)
     .single();
 
-  // Auto-create tour_hosts record on first login if missing
   if (!tourHost) {
     await supabase.from("tour_hosts").insert({
       id: user.id,

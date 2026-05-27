@@ -1,15 +1,19 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import type { User } from "@supabase/supabase-js";
 import type { TourHostRow } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { BRAND } from "@/lib/helpers";
 import DemoModeBanner from "@/components/shared/DemoModeBanner";
 
+interface ShellUser {
+  id: string;
+  email?: string | null;
+}
+
 interface Props {
   children: React.ReactNode;
-  user: User;
+  user: ShellUser;
   tourHost: TourHostRow | null;
 }
 

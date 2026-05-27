@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { useDemoMode, setDemoMode } from "@/lib/demoMode";
 
 export default function DemoModeBanner() {
@@ -10,12 +9,9 @@ export default function DemoModeBanner() {
 
   if (!isDemo) return null;
 
-  async function handleExit() {
+  function handleExit() {
     setDemoMode(false);
-    const supabase = createClient();
-    await supabase.auth.signOut();
     router.push("/login");
-    router.refresh();
   }
 
   return (

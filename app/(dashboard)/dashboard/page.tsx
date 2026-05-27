@@ -1,11 +1,13 @@
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import PipelineClient from "./PipelineClient";
+
+const DEMO_USER_ID = "66e70f80-b314-42f4-8233-e49e4abe4f05";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+
+  const userId = user?.id ?? DEMO_USER_ID;
 
   const [{ data: tours }, { data: tourHost }] = await Promise.all([
     supabase
@@ -15,15 +17,15 @@ export default async function DashboardPage() {
     supabase
       .from("tour_hosts")
       .select("*")
-      .eq("id", user.id)
+      .eq("id", userId)
       .single(),
   ]);
 
   return (
     <PipelineClient
       initialTours={tours ?? []}
-      currentHostId={user.id}
-      currentHostName={tourHost?.name ?? user.email ?? ""}
+      currentHostId={userId}
+      currentHostName={tourHost?.name ?? user?.email ?? "Demo Host"}
     />
   );
 }

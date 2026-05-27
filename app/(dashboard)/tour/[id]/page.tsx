@@ -1,12 +1,15 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import TourDetailClient from "./TourDetailClient";
+
+const DEMO_USER_ID = "66e70f80-b314-42f4-8233-e49e4abe4f05";
 
 export default async function TourDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+
+  const userId = user?.id ?? DEMO_USER_ID;
 
   const [{ data: tour }, { data: members }, { data: days }, { data: postTrip }, { data: vendors }] = await Promise.all([
     supabase
@@ -44,7 +47,7 @@ export default async function TourDetailPage({ params }: { params: Promise<{ id:
       initialDays={days ?? []}
       initialPostTrip={postTrip ?? null}
       vendors={vendors ?? []}
-      currentUserId={user.id}
+      currentUserId={userId}
     />
   );
 }

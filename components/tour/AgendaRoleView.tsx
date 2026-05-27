@@ -1,22 +1,24 @@
 "use client";
 
 import TypeDot from "@/components/shared/TypeDot";
-import { BRAND, ROLES, DEFAULT_VISIBILITY, getMapUrl, TRAVEL_METHODS } from "@/lib/helpers";
+import { BRAND, ROLES, DEFAULT_VISIBILITY, getMapUrl, TRAVEL_METHODS, getRoleLabel } from "@/lib/helpers";
 import type { AgendaDayWithItems, Role } from "@/lib/types";
 
 interface Props {
   tourName: string;
   tourDestination?: string | null;
   tourDates?: string | null;
+  tourType?: string | null;
   days: AgendaDayWithItems[];
   role: Role;
   onClose?: () => void;
   embedded?: boolean;
 }
 
-export default function AgendaRoleView({ tourName, tourDestination, tourDates, days, role, onClose, embedded }: Props) {
+export default function AgendaRoleView({ tourName, tourDestination, tourDates, tourType, days, role, onClose, embedded }: Props) {
   const vis = DEFAULT_VISIBILITY[role] as Record<string, boolean>;
   const roleInfo = ROLES[role];
+  const roleLabel = getRoleLabel(role, tourType);
 
   return (
     <div style={{ maxWidth: 680, margin: "0 auto" }}>
@@ -24,9 +26,9 @@ export default function AgendaRoleView({ tourName, tourDestination, tourDates, d
         <div style={{ marginBottom: 14, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{ background: roleInfo.bg, color: roleInfo.color, borderRadius: 6, padding: "3px 10px", fontSize: 11, fontWeight: 700 }}>
-              Previewing: {roleInfo.label}
+              Previewing: {roleLabel}
             </div>
-            <span style={{ fontSize: 11, color: "#94a3b8" }}>This is what {roleInfo.label.toLowerCase()}s see on the shared view.</span>
+            <span style={{ fontSize: 11, color: "#94a3b8" }}>This is what {roleLabel.toLowerCase()}s see on the shared view.</span>
           </div>
           <button
             onClick={onClose}
@@ -47,7 +49,7 @@ export default function AgendaRoleView({ tourName, tourDestination, tourDates, d
             <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontWeight: 600, fontSize: 12, color: "#fff", letterSpacing: 0.3 }}>Itinerary Planner</span>
           </div>
           <div style={{ background: roleInfo.bg, color: roleInfo.color, borderRadius: 6, padding: "3px 10px", fontSize: 11, fontWeight: 700 }}>
-            {roleInfo.label}
+            {roleLabel}
           </div>
         </div>
         <h1 style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", color: "#fff", fontSize: 22, fontWeight: 700, margin: "0 0 4px" }}>

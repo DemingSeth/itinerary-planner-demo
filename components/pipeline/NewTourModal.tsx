@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { BRAND, STATUSES } from "@/lib/helpers";
+import { BRAND, STATUSES, TOUR_TYPES } from "@/lib/helpers";
 
 interface Props {
   onClose: () => void;
   onCreate: (fields: {
     name: string; school: string; destination: string;
-    dates: string; status: string; transport_type: string;
+    dates: string; status: string; transport_type: string; tour_type: string;
   }) => Promise<void>;
 }
 
@@ -26,7 +26,7 @@ const TRANSPORT = [
 export default function NewTourModal({ onClose, onCreate }: Props) {
   const [form, setForm] = useState({
     name: "", school: "", destination: "", dates: "",
-    status: "bid", transport_type: "flight",
+    status: "bid", transport_type: "flight", tour_type: "educational",
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -56,6 +56,13 @@ export default function NewTourModal({ onClose, onCreate }: Props) {
         </div>
 
         <form onSubmit={handleSubmit} style={{ padding: 24, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 14 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <label style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 0.8 }}>Tour Type *</label>
+            <select style={{ ...inp, background: "#fff" }} value={form.tour_type} onChange={e => f({ tour_type: e.target.value })}>
+              {TOUR_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
+          </div>
+
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <label style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 0.8 }}>Tour Name *</label>
             <input style={inp} value={form.name} onChange={e => f({ name: e.target.value })} placeholder="Westridge HS — NYC Spring Musical" autoFocus />

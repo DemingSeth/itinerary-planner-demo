@@ -5,6 +5,7 @@ import type { User } from "@supabase/supabase-js";
 import type { TourHostRow } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { BRAND } from "@/lib/helpers";
+import DemoModeBanner from "@/components/shared/DemoModeBanner";
 
 interface Props {
   children: React.ReactNode;
@@ -26,6 +27,7 @@ export default function DashboardShell({ children, user, tourHost }: Props) {
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8fafc", display: "flex", flexDirection: "column" }}>
+      <DemoModeBanner />
       {/* Top nav */}
       <header style={{ background: BRAND.navy, padding: "0 24px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
         <div

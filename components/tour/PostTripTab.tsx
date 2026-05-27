@@ -2,7 +2,8 @@
 
 import { useState, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { BRAND, ROLES } from "@/lib/helpers";
+import { BRAND, ROLES, getRoleLabel } from "@/lib/helpers";
+import { isDemoMode, fakeId } from "@/lib/demoMode";
 import { Tex, Btn } from "@/components/tour/ui";
 import type { TourRow, PostTripRow, AgendaDayWithItems } from "@/lib/types";
 
@@ -38,6 +39,16 @@ export default function PostTripTab({ tour, days, initialPostTrip }: Props) {
 
   const persist = useCallback(async (patch: Partial<PostTripRow>) => {
     setSaving(true);
+    if (isDemoMode()) {
+      if (!postTrip?.id) {
+        const fakeData = { id: fakeId(), tour_id: tour.id, completed: false, ...patch, updated_at: new Date().toISOString() } as PostTripRow;
+        setPostTrip(fakeData);
+      }
+      setSaving(false);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+      return;
+    }
     const supabase = createClient();
     if (postTrip?.id) {
       await supabase.from("post_trip").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", postTrip.id);
@@ -130,7 +141,7 @@ export default function PostTripTab({ tour, days, initialPostTrip }: Props) {
                 <div style={{ flex: 1 }}>
                   <div style={{ display: "flex", gap: 8, marginBottom: 2, alignItems: "center", flexWrap: "wrap" }}>
                     <span style={{ background: ROLES_TYPED[fb.role]?.bg || "#f1f5f9", color: ROLES_TYPED[fb.role]?.color || "#475569", borderRadius: 4, padding: "1px 7px", fontSize: 10, fontWeight: 700 }}>
-                      {ROLES_TYPED[fb.role]?.label || fb.role}
+                      {getRoleLabel(fb.role, tour.tour_type)}
                     </span>
                     <span style={{ color: "#94a3b8", fontSize: 10 }}>{fb.dayDate} · {fb.itemTitle}</span>
                   </div>

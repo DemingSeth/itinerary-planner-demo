@@ -2,11 +2,12 @@
 
 import { useState, useRef, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { isDemoMode, fakeId } from "@/lib/demoMode";
 import TypeDot from "@/components/shared/TypeDot";
 import {
   BRAND, ROLES, AGENDA_TYPES, TRAVEL_METHODS,
   isDayInPast, parseAgendaDate, formatAgendaDate, suggestNextDate,
-  getMapUrl, fmt$,
+  getMapUrl, fmt$, getRoleLabel,
 } from "@/lib/helpers";
 import AgendaRoleView from "@/components/tour/AgendaRoleView";
 import type {
@@ -347,8 +348,9 @@ function ItemForm({ form, setForm, onSave, onCancel, isEdit, saving }: {
 }
 
 // ── ItemRow ────────────────────────────────────────────────────────────────────
-function ItemRow({ item, onEdit, onRemove, onToggleCostPaid, onAddFeedback }: {
+function ItemRow({ item, tourType, onEdit, onRemove, onToggleCostPaid, onAddFeedback }: {
   item: AgendaItemWithFeedback;
+  tourType?: string | null;
   onEdit: () => void; onRemove: () => void; onToggleCostPaid: () => void;
   onAddFeedback: (text: string, role: string, sentiment: string) => void;
 }) {
@@ -427,7 +429,7 @@ function ItemRow({ item, onEdit, onRemove, onToggleCostPaid, onAddFeedback }: {
                   <span style={{ fontSize: 16, lineHeight: 1, flexShrink: 0 }}>{fb.sentiment || "😐"}</span>
                   <span>
                     <span style={{ background: ROLES_TYPED[fb.role]?.bg || "#f1f5f9", color: ROLES_TYPED[fb.role]?.color || "#475569", borderRadius: 4, padding: "0 5px", fontSize: 10, fontWeight: 600, marginRight: 5 }}>
-                      {ROLES_TYPED[fb.role]?.label || fb.role}
+                      {getRoleLabel(fb.role, tourType)}
                     </span>
                     {fb.text}
                   </span>
@@ -449,7 +451,7 @@ function ItemRow({ item, onEdit, onRemove, onToggleCostPaid, onAddFeedback }: {
                 ))}
               </div>
               <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-                <Sel options={Object.entries(ROLES_TYPED).map(([v, r]) => ({ value: v, label: r.label }))} value={fbRole} onChange={e => setFbRole(e.target.value)} style={{ width: 165, padding: "4px 8px", fontSize: 11 }} />
+                <Sel options={Object.keys(ROLES_TYPED).map(v => ({ value: v, label: getRoleLabel(v, tourType) }))} value={fbRole} onChange={e => setFbRole(e.target.value)} style={{ width: 165, padding: "4px 8px", fontSize: 11 }} />
                 <input value={fbText} onChange={e => setFbText(e.target.value)}
                   onKeyDown={e => { if (e.key === "Enter" && fbText.trim()) { onAddFeedback(fbText, fbRole, fbSentiment); setFbText(""); setShowFeedback(false); } }}
                   placeholder="Add a comment (optional)..."
@@ -554,12 +556,19 @@ export default function AgendaTab({ tour, days, onDaysChange, onTourChange }: Ag
     const startDate = parseAgendaDate(newDayDate);
     if (!startDate) { alert("Please enter a valid date like Apr 14 or Apr 14, 2026"); return; }
     const count = addMultiple ? Math.max(1, multiCount) : 1;
-    const supabase = createClient();
     const inserts = Array.from({ length: count }, (_, i) => {
       const d = new Date(startDate);
       d.setDate(d.getDate() + i);
       return { tour_id: tour.id, day_number: days.length + i + 1, date: formatAgendaDate(d), collapsed: false, sort_order: days.length + i + 1 };
     });
+    if (isDemoMode()) {
+      const fakeRows = inserts.map(ins => ({ ...ins, id: fakeId() }));
+      onDaysChange([...days, ...fakeRows.map(r => ({ ...r, agenda_items: [] as AgendaItemWithFeedback[] }))]);
+      setNewDayDate("");
+      setShowAddDay(false);
+      return;
+    }
+    const supabase = createClient();
     const { data } = await supabase.from("agenda_days").insert(inserts).select();
     if (data) onDaysChange([...days, ...data.map(r => ({ ...r, agenda_items: [] as AgendaItemWithFeedback[] }))]);
     setNewDayDate("");
@@ -567,16 +576,20 @@ export default function AgendaTab({ tour, days, onDaysChange, onTourChange }: Ag
   }
 
   async function removeDay(dayId: string) {
-    const supabase = createClient();
-    await supabase.from("agenda_days").delete().eq("id", dayId);
+    if (!isDemoMode()) {
+      const supabase = createClient();
+      await supabase.from("agenda_days").delete().eq("id", dayId);
+    }
     onDaysChange(days.filter(d => d.id !== dayId));
   }
 
   async function toggleCollapsed(dayId: string) {
     const day = days.find(d => d.id === dayId);
     if (!day) return;
-    const supabase = createClient();
-    await supabase.from("agenda_days").update({ collapsed: !day.collapsed }).eq("id", dayId);
+    if (!isDemoMode()) {
+      const supabase = createClient();
+      await supabase.from("agenda_days").update({ collapsed: !day.collapsed }).eq("id", dayId);
+    }
     onDaysChange(days.map(d => d.id === dayId ? { ...d, collapsed: !d.collapsed } : d));
   }
 
@@ -585,6 +598,14 @@ export default function AgendaTab({ tour, days, onDaysChange, onTourChange }: Ag
     if (!itemForm.title.trim()) return;
     setSaving(true);
     const day = days.find(d => d.id === dayId);
+    if (isDemoMode()) {
+      const fakeData = { ...formToInsert(itemForm, dayId, (day?.agenda_items.length ?? 0) + 1), id: fakeId(), agenda_feedback: [] as AgendaItemWithFeedback["agenda_feedback"] };
+      onDaysChange(days.map(d => d.id === dayId ? { ...d, agenda_items: [...d.agenda_items, fakeData as AgendaItemWithFeedback] } : d));
+      setItemForm(BLANK);
+      setAddingItem(null);
+      setSaving(false);
+      return;
+    }
     const supabase = createClient();
     const { data } = await supabase.from("agenda_items")
       .insert(formToInsert(itemForm, dayId, (day?.agenda_items.length ?? 0) + 1))
@@ -599,8 +620,10 @@ export default function AgendaTab({ tour, days, onDaysChange, onTourChange }: Ag
     if (!editCtx || !editForm.title.trim()) return;
     setSaving(true);
     const { day_id, tour_id, sort_order, ...patch } = formToInsert(editForm, editCtx.dayId, 0);
-    const supabase = createClient();
-    await supabase.from("agenda_items").update(patch).eq("id", editCtx.itemId);
+    if (!isDemoMode()) {
+      const supabase = createClient();
+      await supabase.from("agenda_items").update(patch).eq("id", editCtx.itemId);
+    }
     onDaysChange(days.map(d => d.id === editCtx.dayId ? {
       ...d, agenda_items: d.agenda_items.map(i => i.id === editCtx.itemId ? { ...i, ...patch } : i),
     } : d));
@@ -609,18 +632,29 @@ export default function AgendaTab({ tour, days, onDaysChange, onTourChange }: Ag
   }
 
   async function removeItem(dayId: string, itemId: string) {
-    const supabase = createClient();
-    await supabase.from("agenda_items").delete().eq("id", itemId);
+    if (!isDemoMode()) {
+      const supabase = createClient();
+      await supabase.from("agenda_items").delete().eq("id", itemId);
+    }
     onDaysChange(days.map(d => d.id === dayId ? { ...d, agenda_items: d.agenda_items.filter(i => i.id !== itemId) } : d));
   }
 
   async function toggleCostPaid(dayId: string, item: AgendaItemWithFeedback) {
-    const supabase = createClient();
-    await supabase.from("agenda_items").update({ cost_paid: !item.cost_paid }).eq("id", item.id);
+    if (!isDemoMode()) {
+      const supabase = createClient();
+      await supabase.from("agenda_items").update({ cost_paid: !item.cost_paid }).eq("id", item.id);
+    }
     onDaysChange(days.map(d => d.id === dayId ? { ...d, agenda_items: d.agenda_items.map(i => i.id === item.id ? { ...i, cost_paid: !i.cost_paid } : i) } : d));
   }
 
   async function addFeedback(dayId: string, itemId: string, text: string, role: string, sentiment: string) {
+    if (isDemoMode()) {
+      const fakeData = { id: fakeId(), item_id: itemId, tour_id: tour.id, role, sentiment: sentiment as import("@/lib/types").FeedbackSentiment, text: text || null, submitted_at: new Date().toISOString() };
+      onDaysChange(days.map(d => d.id === dayId ? {
+        ...d, agenda_items: d.agenda_items.map(i => i.id === itemId ? { ...i, agenda_feedback: [...(i.agenda_feedback || []), fakeData] } : i),
+      } : d));
+      return;
+    }
     const supabase = createClient();
     const { data } = await supabase.from("agenda_feedback").insert({
       item_id: itemId, tour_id: tour.id, role, sentiment, text: text || null,
@@ -639,6 +673,7 @@ export default function AgendaTab({ tour, days, onDaysChange, onTourChange }: Ag
         tourName={tour.name}
         tourDestination={tour.destination}
         tourDates={tour.dates}
+        tourType={tour.tour_type}
         days={days}
         role={previewRole}
         onClose={() => setPreviewRole(null)}
@@ -666,9 +701,9 @@ export default function AgendaTab({ tour, days, onDaysChange, onTourChange }: Ag
         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
           {days.length > 0 && (
             <>
-              <button onClick={() => setPreviewRole("teacher")} style={{ background: "#f5f3ff", color: "#5b21b6", border: "none", borderRadius: 6, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Preview Teacher</button>
-              <button onClick={() => setPreviewRole("driver")} style={{ background: "#fef3c7", color: "#92400e", border: "none", borderRadius: 6, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Preview Driver</button>
-              <button onClick={() => setPreviewRole("student")} style={{ background: "#ecfdf5", color: "#065f46", border: "none", borderRadius: 6, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Preview Student</button>
+              <button onClick={() => setPreviewRole("teacher")} style={{ background: "#f5f3ff", color: "#5b21b6", border: "none", borderRadius: 6, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Preview {getRoleLabel("teacher", tour.tour_type)}</button>
+              <button onClick={() => setPreviewRole("driver")} style={{ background: "#fef3c7", color: "#92400e", border: "none", borderRadius: 6, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Preview {getRoleLabel("driver", tour.tour_type)}</button>
+              <button onClick={() => setPreviewRole("student")} style={{ background: "#ecfdf5", color: "#065f46", border: "none", borderRadius: 6, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Preview {getRoleLabel("student", tour.tour_type)}</button>
               <button onClick={() => setShowShareModal(true)} style={{ background: BRAND.teal, color: "#fff", border: "none", borderRadius: 6, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Share View</button>
             </>
           )}
@@ -726,6 +761,7 @@ export default function AgendaTab({ tour, days, onDaysChange, onTourChange }: Ag
                     <ItemRow
                       key={item.id}
                       item={item}
+                      tourType={tour.tour_type}
                       onEdit={() => { setEditCtx({ dayId: day.id, itemId: item.id }); setEditForm(itemToForm(item)); }}
                       onRemove={() => removeItem(day.id, item.id)}
                       onToggleCostPaid={() => toggleCostPaid(day.id, item)}

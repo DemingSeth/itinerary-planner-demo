@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { BRAND, STATUSES } from "@/lib/helpers";
+import { isDemoMode } from "@/lib/demoMode";
 import StatusPill from "@/components/shared/StatusPill";
 import OverviewTab from "@/components/tour/OverviewTab";
 import InfinityLogoImg from "@/components/shared/InfinityLogoImg";
@@ -60,6 +61,7 @@ export default function TourDetailClient({ tour: initialTour, initialMembers, in
   async function handleTourChange(patch: Record<string, any>) {
     const optimistic = { ...tour, ...patch };
     setTour(optimistic);
+    if (isDemoMode()) return;
     setSaving(true);
     const supabase = createClient();
     await supabase.from("tours").update(patch).eq("id", tour.id);

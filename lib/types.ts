@@ -75,6 +75,7 @@ export interface TourHostRow {
 
 export type TourStatus = "bid" | "committed" | "in-progress" | "closed";
 export type TransportType = "bus" | "flight" | "both";
+export type TourType = "educational" | "family" | "corporate" | "mixed";
 
 export interface RoomConfig {
   boysPerRoom: number;
@@ -115,6 +116,7 @@ export interface TourRow {
   activities: string[];
   notes: string | null;
   access_codes: AccessCodes;
+  tour_type: TourType | null;
   created_at: string;
   updated_at: string;
 }

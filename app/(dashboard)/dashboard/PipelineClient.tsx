@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import PipelineView from "@/components/pipeline/PipelineView";
 import NewTourModal from "@/components/pipeline/NewTourModal";
+import { isDemoMode } from "@/lib/demoMode";
 
 interface Props {
   initialTours: any[];
@@ -17,11 +18,18 @@ export default function PipelineClient({ initialTours, currentHostId, currentHos
   const [tours, setTours] = useState(initialTours);
   const [showNewTour, setShowNewTour] = useState(false);
   const [duplicating, setDuplicating] = useState<string | null>(null);
+  const [demoNotice, setDemoNotice] = useState<string | null>(null);
 
   async function handleNewTour(fields: {
     name: string; school: string; destination: string;
-    dates: string; status: string; transport_type: string;
+    dates: string; status: string; transport_type: string; tour_type: string;
   }) {
+    if (isDemoMode()) {
+      setShowNewTour(false);
+      setDemoNotice("Demo mode: new tours are not saved. Explore the existing tours below.");
+      setTimeout(() => setDemoNotice(null), 5000);
+      return;
+    }
     const supabase = createClient();
     const { data, error } = await supabase
       .from("tours")
@@ -33,6 +41,7 @@ export default function PipelineClient({ initialTours, currentHostId, currentHos
         dates: fields.dates,
         status: fields.status as any,
         transport_type: fields.transport_type as any,
+        tour_type: fields.tour_type as any,
         access_codes: { coordinator: "", teacher: "", driver: "", student: "" },
       })
       .select("*, tour_hosts(id, name, initials), tour_members(id, type, waiver)")
@@ -45,6 +54,11 @@ export default function PipelineClient({ initialTours, currentHostId, currentHos
   }
 
   async function handleDuplicate(tourId: string) {
+    if (isDemoMode()) {
+      setDemoNotice("Demo mode: duplicating tours is not available.");
+      setTimeout(() => setDemoNotice(null), 5000);
+      return;
+    }
     setDuplicating(tourId);
     const supabase = createClient();
 
@@ -145,6 +159,11 @@ export default function PipelineClient({ initialTours, currentHostId, currentHos
 
   return (
     <>
+      {demoNotice && (
+        <div style={{ background: "#fff7ed", border: "1.5px solid #fed7aa", color: "#9a3412", borderRadius: 8, padding: "10px 16px", fontSize: 13, fontWeight: 500, marginBottom: 12 }}>
+          {demoNotice}
+        </div>
+      )}
       <PipelineView
         tours={tours}
         currentHostId={currentHostId}

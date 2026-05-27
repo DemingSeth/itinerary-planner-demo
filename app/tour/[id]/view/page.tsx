@@ -10,7 +10,7 @@ export default async function PublicTourViewPage({ params }: { params: Promise<{
   const [{ data: tour }, { data: rawDays }] = await Promise.all([
     supabase
       .from("tours")
-      .select("id, name, destination, dates, access_codes")
+      .select("id, name, destination, dates, access_codes, tour_type")
       .eq("id", id)
       .single(),
     supabase
@@ -36,6 +36,7 @@ export default async function PublicTourViewPage({ params }: { params: Promise<{
       tourName={tour.name}
       tourDestination={tour.destination ?? null}
       tourDates={tour.dates ?? null}
+      tourType={(tour as any).tour_type ?? null}
       accessCodes={tour.access_codes}
       days={days}
     />

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import AgendaRoleView from "@/components/tour/AgendaRoleView";
 import InfinityLogoImg from "@/components/shared/InfinityLogoImg";
-import { BRAND, ROLES } from "@/lib/helpers";
+import { BRAND, ROLES, getRoleLabel } from "@/lib/helpers";
 import type { AgendaDayWithItems, Role, AccessCodes } from "@/lib/types";
 
 interface Props {
@@ -11,18 +11,24 @@ interface Props {
   tourName: string;
   tourDestination: string | null;
   tourDates: string | null;
+  tourType: string | null;
   accessCodes: AccessCodes;
   days: AgendaDayWithItems[];
 }
 
-const ROLE_OPTIONS: { role: Role; label: string; description: string }[] = [
-  { role: "teacher",     label: "Teacher / Admin",     description: "Full schedule with contacts" },
-  { role: "driver",      label: "Bus Driver",           description: "Addresses and driving notes" },
-  { role: "student",     label: "Student / Chaperone",  description: "Day-by-day itinerary" },
-  { role: "coordinator", label: "Tour Host",            description: "Full coordinator access" },
-];
+const ROLE_DESCRIPTIONS: Record<string, string> = {
+  teacher:     "Full schedule with contacts",
+  driver:      "Addresses and driving notes",
+  student:     "Day-by-day itinerary",
+  coordinator: "Full coordinator access",
+};
 
-export default function PublicTourViewClient({ tourName, tourDestination, tourDates, accessCodes, days }: Props) {
+export default function PublicTourViewClient({ tourName, tourDestination, tourDates, tourType, accessCodes, days }: Props) {
+  const roleOptions = (["teacher", "driver", "student", "coordinator"] as Role[]).map(r => ({
+    role: r,
+    label: getRoleLabel(r, tourType),
+    description: ROLE_DESCRIPTIONS[r],
+  }));
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +53,7 @@ export default function PublicTourViewClient({ tourName, tourDestination, tourDa
           tourName={tourName}
           tourDestination={tourDestination}
           tourDates={tourDates}
+          tourType={tourType}
           days={days}
           role={unlocked}
         />
@@ -88,7 +95,7 @@ export default function PublicTourViewClient({ tourName, tourDestination, tourDa
             </p>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
-              {ROLE_OPTIONS.map(opt => {
+              {roleOptions.map(opt => {
                 const roleInfo = ROLES[opt.role];
                 const selected = selectedRole === opt.role;
                 return (

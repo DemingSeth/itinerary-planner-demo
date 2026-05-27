@@ -53,6 +53,40 @@ export const MEMBER_TYPES = [
 
 export const VENDOR_CATS = ["Airfare", "Bus", "Hotel", "Tickets", "Restaurant", "Activity", "Other"] as const;
 
+export const TOUR_TYPES = [
+  { value: "educational", label: "Educational / School" },
+  { value: "family",      label: "Family" },
+  { value: "corporate",   label: "Corporate" },
+  { value: "mixed",       label: "Mixed / Other" },
+] as const;
+
+const MEMBER_TYPE_LABELS: Record<string, Record<string, string>> = {
+  student:    { educational: "Student",        family: "Child / Family", corporate: "Attendee",    mixed: "Traveler" },
+  chaperone:  { educational: "Chaperone",      family: "Chaperone",      corporate: "Guest",       mixed: "Companion" },
+  "tour-host":{ educational: "Tour Host",      family: "Tour Host",      corporate: "Coordinator", mixed: "Tour Host" },
+  teacher:    { educational: "Teacher / Admin",family: "Organizer",      corporate: "Organizer",   mixed: "Organizer" },
+  driver:     { educational: "Bus Driver",     family: "Driver",         corporate: "Driver",      mixed: "Driver" },
+};
+
+const ROLE_LABELS: Record<string, Record<string, string>> = {
+  coordinator: { educational: "Tour Host",          family: "Tour Host",   corporate: "Coordinator",        mixed: "Tour Host" },
+  teacher:     { educational: "Teacher / Admin",     family: "Organizer",   corporate: "Organizer",          mixed: "Organizer" },
+  driver:      { educational: "Bus Driver",          family: "Driver",      corporate: "Driver",             mixed: "Driver" },
+  student:     { educational: "Student / Chaperone", family: "Child/Family",corporate: "Attendee",           mixed: "Traveler / Companion" },
+};
+
+export function getMemberLabel(memberType: string, tourType?: string | null): string {
+  return MEMBER_TYPE_LABELS[memberType]?.[tourType || "educational"] ?? memberType;
+}
+
+export function getRoleLabel(role: string, tourType?: string | null): string {
+  return ROLE_LABELS[role]?.[tourType || "educational"] ?? role;
+}
+
+export function getMemberTypeOptions(tourType?: string | null) {
+  return MEMBER_TYPES.map(t => ({ value: t.value, label: getMemberLabel(t.value, tourType) }));
+}
+
 export const ROLES = {
   coordinator: { label: "Tour Host",          color: BRAND.navy, bg: "#e8f4f8", rank: 4 },
   teacher:     { label: "Teacher / Admin",     color: "#5b21b6",  bg: "#f5f3ff", rank: 3 },

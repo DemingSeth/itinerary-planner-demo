@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BRAND, ROLES, DEFAULT_VISIBILITY } from "@/lib/helpers";
+import { BRAND, ROLES, DEFAULT_VISIBILITY, getRoleLabel } from "@/lib/helpers";
 import { I, Field, Inp, Btn } from "@/components/tour/ui";
 import type { TourRow } from "@/lib/types";
 
@@ -89,7 +89,7 @@ export default function SettingsTab({ tour, isOwner, onTourChange }: Props) {
                 <th style={{ textAlign: "left", padding: "8px 12px", fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: .6 }}>Field</th>
                 {VIS_ROLES.map(r => (
                   <th key={r} style={{ textAlign: "center", padding: "8px 12px", fontSize: 11, fontWeight: 700, color: ROLES_TYPED[r].color, textTransform: "uppercase", letterSpacing: .6 }}>
-                    {ROLES_TYPED[r].label}
+                    {getRoleLabel(r, tour.tour_type)}
                   </th>
                 ))}
               </tr>

@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { BRAND, MEMBER_TYPES, calcRoster, calcRooms } from "@/lib/helpers";
+import { BRAND, MEMBER_TYPES, calcRoster, calcRooms, getMemberLabel, getMemberTypeOptions } from "@/lib/helpers";
+import { isDemoMode, fakeId } from "@/lib/demoMode";
 import { I, INP, Field, Inp, Tex, Sel, Btn, Modal } from "@/components/tour/ui";
 import type { TourRow, TourMemberRow } from "@/lib/types";
 
@@ -44,6 +45,14 @@ export default function RosterTab({ tour, members, onMembersChange }: Props) {
   async function addMember() {
     if (!form.name.trim()) return;
     setSaving(true);
+    if (isDemoMode()) {
+      const fakeData = { id: fakeId(), tour_id: tour.id, name: form.name.trim(), type: form.type, gender: form.gender, waiver: form.waiver, notes: form.notes || null, sort_order: members.length + 1 } as TourMemberRow;
+      onMembersChange([...members, fakeData]);
+      setForm({ name: "", type: "student", gender: "female", waiver: false, notes: "" });
+      setShowAdd(false);
+      setSaving(false);
+      return;
+    }
     const supabase = createClient();
     const { data } = await supabase.from("tour_members").insert({
       tour_id: tour.id,
@@ -64,7 +73,6 @@ export default function RosterTab({ tour, members, onMembersChange }: Props) {
     const lines = csvText.trim().split("\n").filter(Boolean);
     if (!lines.length) return;
     setSaving(true);
-    const supabase = createClient();
     const inserts = lines.map((l, i) => {
       const parts = l.split(",").map(s => s.trim());
       return {
@@ -77,6 +85,15 @@ export default function RosterTab({ tour, members, onMembersChange }: Props) {
         sort_order: members.length + i + 1,
       };
     }).filter(r => r.name);
+    if (isDemoMode()) {
+      const fakeData = inserts.map(ins => ({ ...ins, id: fakeId() })) as TourMemberRow[];
+      onMembersChange([...members, ...fakeData]);
+      setCsvText("");
+      setShowCsv(false);
+      setSaving(false);
+      return;
+    }
+    const supabase = createClient();
     const { data } = await supabase.from("tour_members").insert(inserts).select();
     if (data) onMembersChange([...members, ...data]);
     setCsvText("");
@@ -85,14 +102,18 @@ export default function RosterTab({ tour, members, onMembersChange }: Props) {
   }
 
   async function toggleWaiver(member: TourMemberRow) {
-    const supabase = createClient();
-    await supabase.from("tour_members").update({ waiver: !member.waiver }).eq("id", member.id);
+    if (!isDemoMode()) {
+      const supabase = createClient();
+      await supabase.from("tour_members").update({ waiver: !member.waiver }).eq("id", member.id);
+    }
     onMembersChange(members.map(m => m.id === member.id ? { ...m, waiver: !m.waiver } : m));
   }
 
   async function removeMember(id: string) {
-    const supabase = createClient();
-    await supabase.from("tour_members").delete().eq("id", id);
+    if (!isDemoMode()) {
+      const supabase = createClient();
+      await supabase.from("tour_members").delete().eq("id", id);
+    }
     onMembersChange(members.filter(m => m.id !== id));
   }
 
@@ -152,11 +173,11 @@ export default function RosterTab({ tour, members, onMembersChange }: Props) {
           style={{ width: 160 }}
           options={[
             { value: "all",       label: "All" },
-            { value: "student",   label: "Students" },
-            { value: "chaperone", label: "Chaperones" },
-            { value: "tour-host", label: "Tour Hosts" },
-            { value: "teacher",   label: "Teachers" },
-            { value: "driver",    label: "Drivers" },
+            { value: "student",   label: getMemberLabel("student",   tour.tour_type) + "s" },
+            { value: "chaperone", label: getMemberLabel("chaperone", tour.tour_type) + "s" },
+            { value: "tour-host", label: getMemberLabel("tour-host", tour.tour_type) + "s" },
+            { value: "teacher",   label: getMemberLabel("teacher",   tour.tour_type) + "s" },
+            { value: "driver",    label: getMemberLabel("driver",    tour.tour_type) + "s" },
             { value: "no-waiver", label: "Missing waiver" },
           ]}
         />
@@ -189,7 +210,7 @@ export default function RosterTab({ tour, members, onMembersChange }: Props) {
                   <td style={{ padding: "9px 12px", fontWeight: 600, color: "#0f2233" }}>{m.name}</td>
                   <td style={{ padding: "9px 12px" }}>
                     <span style={{ ...ts, fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 5 }}>
-                      {MEMBER_TYPES.find(t => t.value === m.type)?.label || m.type}
+                      {getMemberLabel(m.type, tour.tour_type)}
                     </span>
                   </td>
                   <td style={{ padding: "9px 12px", color: "#64748b", textTransform: "capitalize" }}>{m.gender || "-"}</td>
@@ -225,7 +246,7 @@ export default function RosterTab({ tour, members, onMembersChange }: Props) {
             </Field>
             <Field label="Type" half>
               <Sel value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value }))}
-                options={MEMBER_TYPES.map(t => ({ value: t.value, label: t.label }))} />
+                options={getMemberTypeOptions(tour.tour_type)} />
             </Field>
             <Field label="Gender" half>
               <Sel value={form.gender} onChange={e => setForm(p => ({ ...p, gender: e.target.value }))}

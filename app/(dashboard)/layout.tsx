@@ -6,8 +6,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  console.log("[DashboardLayout] user:", user ? `authenticated (${user.email})` : "null → rendering DemoOrLoginGate");
-
   if (!user) {
     // No auth session — let the client decide: demo mode or redirect to /login
     return <DemoOrLoginGate>{children}</DemoOrLoginGate>;

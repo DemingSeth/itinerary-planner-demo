@@ -12,14 +12,9 @@ export default function DemoOrLoginGate({ children }: { children: React.ReactNod
   const [isDemo, setIsDemo] = useState(false);
 
   useEffect(() => {
-    const raw = typeof window !== "undefined" ? sessionStorage.getItem("demo_mode") : "(no window)";
     const demo = isDemoMode();
-    console.log("[DemoOrLoginGate] mounted — raw sessionStorage value:", raw, "| isDemoMode():", demo);
     if (!demo) {
-      console.log("[DemoOrLoginGate] demo=false → calling router.replace('/login')");
       router.replace("/login");
-    } else {
-      console.log("[DemoOrLoginGate] demo=true → rendering DashboardShell");
     }
     setIsDemo(demo);
     setReady(true);

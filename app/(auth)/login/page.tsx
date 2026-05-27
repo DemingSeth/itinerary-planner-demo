@@ -34,6 +34,8 @@ export default function LoginPage() {
   function handleDemoLogin() {
     setDemoLoading(true);
     setDemoMode(true);
+    const check = sessionStorage.getItem("demo_mode");
+    console.log("[handleDemoLogin] demo_mode written, readback:", check, "| pushing /dashboard");
     router.push("/dashboard");
   }
 

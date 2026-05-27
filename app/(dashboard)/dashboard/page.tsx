@@ -8,6 +8,7 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser();
 
   const userId = user?.id ?? DEMO_USER_ID;
+  console.log("[DashboardPage] user:", user ? `authenticated (${user.id})` : "null → using DEMO_USER_ID", "| userId:", userId);
 
   const [{ data: tours }, { data: tourHost }] = await Promise.all([
     supabase
@@ -20,6 +21,8 @@ export default async function DashboardPage() {
       .eq("id", userId)
       .single(),
   ]);
+
+  console.log("[DashboardPage] tours:", tours?.length ?? "null", "| tourHost:", tourHost?.name ?? "null");
 
   return (
     <PipelineClient

@@ -674,10 +674,12 @@ export default function AgendaTab({ tour, days, onDaysChange, onTourChange }: Ag
         tourDestination={tour.destination}
         tourDates={tour.dates}
         tourType={tour.tour_type}
+        tourId={tour.id}
         days={days}
         role={previewRole}
         onClose={() => setPreviewRole(null)}
         embedded
+        allowFeedback
       />
     );
   }

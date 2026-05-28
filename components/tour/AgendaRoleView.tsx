@@ -1,24 +1,51 @@
 "use client";
 
+import { useState } from "react";
 import TypeDot from "@/components/shared/TypeDot";
 import { BRAND, ROLES, DEFAULT_VISIBILITY, getMapUrl, TRAVEL_METHODS, getRoleLabel } from "@/lib/helpers";
-import type { AgendaDayWithItems, Role } from "@/lib/types";
+import { createClient } from "@/lib/supabase/client";
+import { isDemoMode } from "@/lib/demoMode";
+import type { AgendaDayWithItems, Role, FeedbackSentiment } from "@/lib/types";
 
 interface Props {
   tourName: string;
   tourDestination?: string | null;
   tourDates?: string | null;
   tourType?: string | null;
+  tourId?: string;
   days: AgendaDayWithItems[];
   role: Role;
   onClose?: () => void;
   embedded?: boolean;
+  allowFeedback?: boolean;
 }
 
-export default function AgendaRoleView({ tourName, tourDestination, tourDates, tourType, days, role, onClose, embedded }: Props) {
+export default function AgendaRoleView({ tourName, tourDestination, tourDates, tourType, tourId, days, role, onClose, embedded, allowFeedback }: Props) {
   const vis = DEFAULT_VISIBILITY[role] as Record<string, boolean>;
   const roleInfo = ROLES[role];
   const roleLabel = getRoleLabel(role, tourType);
+
+  const [feedbackOpen, setFeedbackOpen] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState<string[]>([]);
+  const [fbSentiment, setFbSentiment] = useState("😊");
+  const [fbText, setFbText] = useState("");
+
+  async function submitFeedback(itemId: string) {
+    if (tourId && !isDemoMode()) {
+      const supabase = createClient();
+      await supabase.from("agenda_feedback").insert({
+        item_id: itemId,
+        tour_id: tourId,
+        role,
+        sentiment: fbSentiment as FeedbackSentiment,
+        text: fbText || null,
+      });
+    }
+    setSubmitted(prev => [...prev, itemId]);
+    setFeedbackOpen(null);
+    setFbText("");
+    setFbSentiment("😊");
+  }
 
   return (
     <div style={{ maxWidth: 680, margin: "0 auto" }}>
@@ -175,6 +202,46 @@ export default function AgendaRoleView({ tourName, tourDestination, tourDates, t
                       )}
                     </div>
                   </div>
+
+                  {allowFeedback && (
+                    submitted.includes(item.id) ? (
+                      <div style={{ marginTop: 8, paddingLeft: 34, fontSize: 11, color: "#059669", fontWeight: 600 }}>
+                        ✓ Feedback submitted
+                      </div>
+                    ) : feedbackOpen === item.id ? (
+                      <div style={{ marginTop: 10, paddingLeft: 34 }}>
+                        <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                          {[{ v: "😊", l: "Good" }, { v: "😐", l: "OK" }, { v: "😞", l: "Poor" }].map(opt => (
+                            <button key={opt.v} onClick={() => setFbSentiment(opt.v)}
+                              style={{ flex: 1, padding: "6px 4px", borderRadius: 8, border: `2px solid ${fbSentiment === opt.v ? "#0369a1" : "#e2e8f0"}`, background: fbSentiment === opt.v ? "#eff6ff" : "#fff", cursor: "pointer", fontSize: 22, lineHeight: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                              {opt.v}
+                              <span style={{ fontSize: 9, color: fbSentiment === opt.v ? "#0369a1" : "#94a3b8", fontWeight: 600, fontFamily: "inherit" }}>{opt.l}</span>
+                            </button>
+                          ))}
+                        </div>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <input value={fbText} onChange={e => setFbText(e.target.value)}
+                            placeholder="Comment (optional)..."
+                            style={{ flex: 1, border: "1.5px solid #e2e8f0", borderRadius: 8, padding: "6px 10px", fontSize: 12, fontFamily: "inherit", color: "#1e293b", background: "#fff", outline: "none" }} />
+                          <button onClick={() => submitFeedback(item.id)}
+                            style={{ background: BRAND.navy, color: "#fff", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                            Submit
+                          </button>
+                          <button onClick={() => setFeedbackOpen(null)}
+                            style={{ background: "#f1f5f9", color: "#64748b", border: "none", borderRadius: 8, padding: "6px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ marginTop: 6, paddingLeft: 34 }}>
+                        <button onClick={() => { setFeedbackOpen(item.id); setFbSentiment("😊"); setFbText(""); }}
+                          style={{ fontSize: 11, color: "#94a3b8", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0, display: "flex", alignItems: "center", gap: 4 }}>
+                          <span>💬</span> Rate this stop
+                        </button>
+                      </div>
+                    )
+                  )}
                 </div>
               ))}
             </div>

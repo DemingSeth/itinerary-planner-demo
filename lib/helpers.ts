@@ -60,6 +60,25 @@ export const TOUR_TYPES = [
   { value: "mixed",       label: "Mixed / Other" },
 ] as const;
 
+export const ATTENDANCE_STATUSES = [
+  { value: "pending",   label: "Pending"   },
+  { value: "invited",   label: "Invited"   },
+  { value: "confirmed", label: "Confirmed" },
+  { value: "declined",  label: "Declined"  },
+  { value: "cancelled", label: "Cancelled" },
+] as const;
+
+export function getStatusColor(status: string): { background: string; color: string } {
+  switch (status) {
+    case "pending":   return { background: "#f1f5f9", color: "#475569" };
+    case "invited":   return { background: "#eff6ff", color: "#1e40af" };
+    case "confirmed": return { background: "#dcfce7", color: "#166534" };
+    case "declined":  return { background: "#fee2e2", color: "#b91c1c" };
+    case "cancelled": return { background: "#fef3c7", color: "#92400e" };
+    default:          return { background: "#f1f5f9", color: "#475569" };
+  }
+}
+
 const MEMBER_TYPE_LABELS: Record<string, Record<string, string>> = {
   student:    { educational: "Student",        family: "Child / Family", corporate: "Attendee",    mixed: "Traveler" },
   chaperone:  { educational: "Chaperone",      family: "Chaperone",      corporate: "Guest",       mixed: "Companion" },

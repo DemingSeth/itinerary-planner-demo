@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { BRAND, MEMBER_TYPES, calcRoster, calcRooms, getMemberLabel, getMemberTypeOptions } from "@/lib/helpers";
+import { BRAND, MEMBER_TYPES, ATTENDANCE_STATUSES, calcRoster, calcRooms, getMemberLabel, getMemberTypeOptions, getStatusColor } from "@/lib/helpers";
 import { isDemoMode, fakeId } from "@/lib/demoMode";
 import { I, INP, Field, Inp, Tex, Sel, Btn, Modal } from "@/components/tour/ui";
-import type { TourRow, TourMemberRow } from "@/lib/types";
+import type { TourRow, TourMemberRow, AttendanceStatus } from "@/lib/types";
 
 const TYPE_STYLE: Record<string, { background: string; color: string }> = {
   student:     { background: "#e0f2fe", color: "#0369a1" },
@@ -30,6 +30,7 @@ export default function RosterTab({ tour, members, onMembersChange }: Props) {
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [saving, setSaving] = useState(false);
+  const [openStatusFor, setOpenStatusFor] = useState<string | null>(null);
 
   const calc  = calcRoster(members, tour.bus_capacity);
   const rooms = calcRooms(members, tour.room_config);
@@ -46,7 +47,7 @@ export default function RosterTab({ tour, members, onMembersChange }: Props) {
     if (!form.name.trim()) return;
     setSaving(true);
     if (isDemoMode()) {
-      const fakeData = { id: fakeId(), tour_id: tour.id, name: form.name.trim(), type: form.type, gender: form.gender, waiver: form.waiver, notes: form.notes || null, sort_order: members.length + 1 } as TourMemberRow;
+      const fakeData = { id: fakeId(), tour_id: tour.id, name: form.name.trim(), type: form.type, gender: form.gender, waiver: form.waiver, notes: form.notes || null, sort_order: members.length + 1, attendance_status: "pending" as const } as TourMemberRow;
       onMembersChange([...members, fakeData]);
       setForm({ name: "", type: "student", gender: "female", waiver: false, notes: "" });
       setShowAdd(false);
@@ -86,7 +87,7 @@ export default function RosterTab({ tour, members, onMembersChange }: Props) {
       };
     }).filter(r => r.name);
     if (isDemoMode()) {
-      const fakeData = inserts.map(ins => ({ ...ins, id: fakeId() })) as TourMemberRow[];
+      const fakeData = inserts.map(ins => ({ ...ins, id: fakeId(), attendance_status: "pending" as const })) as TourMemberRow[];
       onMembersChange([...members, ...fakeData]);
       setCsvText("");
       setShowCsv(false);
@@ -99,6 +100,15 @@ export default function RosterTab({ tour, members, onMembersChange }: Props) {
     setCsvText("");
     setShowCsv(false);
     setSaving(false);
+  }
+
+  async function updateStatus(member: TourMemberRow, status: string) {
+    if (!isDemoMode()) {
+      const supabase = createClient();
+      await supabase.from("tour_members").update({ attendance_status: status }).eq("id", member.id);
+    }
+    onMembersChange(members.map(m => m.id === member.id ? { ...m, attendance_status: status as AttendanceStatus } : m));
+    setOpenStatusFor(null);
   }
 
   async function toggleWaiver(member: TourMemberRow) {
@@ -190,7 +200,7 @@ export default function RosterTab({ tour, members, onMembersChange }: Props) {
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
           <thead>
             <tr style={{ borderBottom: "2px solid #f1f5f9", background: "#f8fafc" }}>
-              {["Name", "Type", "Gender", "Waiver", "Notes", ""].map(h => (
+              {["Name", "Type", "Gender", "Status", "Waiver", "Notes", ""].map(h => (
                 <th key={h} style={{ textAlign: "left", padding: "9px 12px", fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: .6 }}>{h}</th>
               ))}
             </tr>
@@ -198,7 +208,7 @@ export default function RosterTab({ tour, members, onMembersChange }: Props) {
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={6} style={{ textAlign: "center", color: "#cbd5e1", padding: "28px 0", fontSize: 12 }}>
+                <td colSpan={7} style={{ textAlign: "center", color: "#cbd5e1", padding: "28px 0", fontSize: 12 }}>
                   {members.length === 0 ? "No travelers yet. Add your first." : "No travelers match."}
                 </td>
               </tr>
@@ -214,6 +224,26 @@ export default function RosterTab({ tour, members, onMembersChange }: Props) {
                     </span>
                   </td>
                   <td style={{ padding: "9px 12px", color: "#64748b", textTransform: "capitalize" }}>{m.gender || "-"}</td>
+                  <td style={{ padding: "9px 12px" }}>
+                    {openStatusFor === m.id ? (
+                      <select
+                        autoFocus
+                        value={m.attendance_status ?? "pending"}
+                        onChange={e => updateStatus(m, e.target.value)}
+                        onBlur={() => setOpenStatusFor(null)}
+                        style={{ fontSize: 10, border: "1.5px solid #e2e8f0", borderRadius: 5, padding: "2px 4px", fontFamily: "inherit", background: "#fff" }}
+                      >
+                        {ATTENDANCE_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                      </select>
+                    ) : (
+                      <button
+                        onClick={() => setOpenStatusFor(m.id)}
+                        style={{ ...getStatusColor(m.attendance_status ?? "pending"), border: "none", borderRadius: 5, padding: "2px 8px", fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+                      >
+                        {ATTENDANCE_STATUSES.find(s => s.value === (m.attendance_status ?? "pending"))?.label ?? "Pending"}
+                      </button>
+                    )}
+                  </td>
                   <td style={{ padding: "9px 12px" }}>
                     {m.type === "student" ? (
                       <button onClick={() => toggleWaiver(m)}

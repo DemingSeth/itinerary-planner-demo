@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { BRAND } from "@/lib/helpers";
 import StatusPill from "@/components/shared/StatusPill";
 
@@ -12,10 +13,24 @@ interface Props {
 }
 
 export default function TripCard({ tour, currentHostId, isDuplicating, onClick, onDuplicate }: Props) {
+  const [hovered, setHovered] = useState(false);
   const members: any[] = tour.tour_members ?? [];
   const memberCount = members.length;
   const waiverPending = members.filter((m: any) => m.type === "student" && !m.waiver).length;
   const host = tour.tour_hosts;
+
+  const confirmed  = members.filter((m: any) => m.attendance_status === "confirmed").length;
+  const invited    = members.filter((m: any) => m.attendance_status === "invited").length;
+  const pending    = members.filter((m: any) => !m.attendance_status || m.attendance_status === "pending").length;
+  const declined   = members.filter((m: any) => m.attendance_status === "declined").length;
+  const cancelled  = members.filter((m: any) => m.attendance_status === "cancelled").length;
+  const breakdown  = [
+    confirmed  > 0 && `${confirmed} confirmed`,
+    invited    > 0 && `${invited} invited`,
+    pending    > 0 && `${pending} pending`,
+    declined   > 0 && `${declined} declined`,
+    cancelled  > 0 && `${cancelled} cancelled`,
+  ].filter(Boolean).join(" · ");
   const isOwn = tour.tour_host_id === currentHostId;
 
   const initials = host?.initials ||
@@ -35,8 +50,21 @@ export default function TripCard({ tour, currentHostId, isDuplicating, onClick, 
         <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 8 }}>
           <StatusPill status={tour.status} />
           {memberCount > 0 && (
-            <span style={{ fontSize: 11, background: "#f1f5f9", color: "#475569", borderRadius: 6, padding: "2px 7px" }}>
-              {memberCount} traveler{memberCount !== 1 ? "s" : ""}
+            <span
+              onMouseEnter={() => setHovered(true)}
+              onMouseLeave={() => setHovered(false)}
+              style={{
+                fontSize: 11,
+                background: hovered && breakdown ? "#e0f2fe" : "#f1f5f9",
+                color: hovered && breakdown ? "#0369a1" : "#475569",
+                borderRadius: 6,
+                padding: "2px 7px",
+                transition: "background 0.15s, color 0.15s",
+                cursor: "default",
+                display: "inline-block",
+              }}
+            >
+              {hovered && breakdown ? breakdown : `${memberCount} traveler${memberCount !== 1 ? "s" : ""}`}
             </span>
           )}
           {waiverPending > 0 && (

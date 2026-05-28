@@ -23,7 +23,7 @@ const ROLE_DESCRIPTIONS: Record<string, string> = {
   coordinator: "Full coordinator access",
 };
 
-export default function PublicTourViewClient({ tourName, tourDestination, tourDates, tourType, accessCodes, days }: Props) {
+export default function PublicTourViewClient({ tourId, tourName, tourDestination, tourDates, tourType, accessCodes, days }: Props) {
   const roleOptions = (["teacher", "driver", "student", "coordinator"] as Role[]).map(r => ({
     role: r,
     label: getRoleLabel(r, tourType),
@@ -54,8 +54,10 @@ export default function PublicTourViewClient({ tourName, tourDestination, tourDa
           tourDestination={tourDestination}
           tourDates={tourDates}
           tourType={tourType}
+          tourId={tourId}
           days={days}
           role={unlocked}
+          allowFeedback
         />
       </div>
     );

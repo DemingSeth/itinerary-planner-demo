@@ -44,7 +44,7 @@ export default function PipelineClient({ initialTours, currentHostId, currentHos
         tour_type: fields.tour_type as any,
         access_codes: { coordinator: "", teacher: "", driver: "", student: "" },
       })
-      .select("*, tour_hosts(id, name, initials), tour_members(id, type, waiver)")
+      .select("*, tour_hosts(id, name, initials), tour_members(id, type, waiver, attendance_status)")
       .single();
 
     if (!error && data) {
@@ -96,7 +96,7 @@ export default function PipelineClient({ initialTours, currentHostId, currentHos
         notes: source.notes,
         access_codes: { coordinator: "", teacher: "", driver: "", student: "" },
       })
-      .select("*, tour_hosts(id, name, initials), tour_members(id, type, waiver)")
+      .select("*, tour_hosts(id, name, initials), tour_members(id, type, waiver, attendance_status)")
       .single();
 
     if (error || !newTour) { setDuplicating(null); return; }

@@ -181,6 +181,7 @@ export interface AgendaFeedbackRow {
 }
 
 export type MemberType = "student" | "chaperone" | "tour-host" | "teacher" | "driver";
+export type AttendanceStatus = "pending" | "invited" | "confirmed" | "declined" | "cancelled";
 
 export interface TourMemberRow {
   id: string;
@@ -191,6 +192,7 @@ export interface TourMemberRow {
   waiver: boolean;
   notes: string | null;
   sort_order: number;
+  attendance_status: AttendanceStatus;
 }
 
 export interface VendorRow {

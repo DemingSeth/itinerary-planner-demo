@@ -11,7 +11,7 @@ export default async function DashboardPage() {
   const [{ data: tours }, { data: tourHost }] = await Promise.all([
     supabase
       .from("tours")
-      .select("*, tour_hosts(id, name, initials), tour_members(id, type, waiver)")
+      .select("*, tour_hosts(id, name, initials), tour_members(id, type, waiver, attendance_status)")
       .order("created_at", { ascending: false }),
     supabase
       .from("tour_hosts")

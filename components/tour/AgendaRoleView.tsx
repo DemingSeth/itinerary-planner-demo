@@ -3,9 +3,8 @@
 import { useState } from "react";
 import TypeDot from "@/components/shared/TypeDot";
 import { BRAND, ROLES, DEFAULT_VISIBILITY, getMapUrl, TRAVEL_METHODS, getRoleLabel } from "@/lib/helpers";
-import { createClient } from "@/lib/supabase/client";
-import { isDemoMode } from "@/lib/demoMode";
-import type { AgendaDayWithItems, Role, FeedbackSentiment } from "@/lib/types";
+import { insertRow } from "@/lib/demo-store";
+import type { AgendaDayWithItems, AgendaFeedbackRow, Role, FeedbackSentiment } from "@/lib/types";
 
 interface Props {
   tourName: string;
@@ -16,11 +15,12 @@ interface Props {
   days: AgendaDayWithItems[];
   role: Role;
   onClose?: () => void;
+  onFeedbackAdded?: (feedback: AgendaFeedbackRow) => void;
   embedded?: boolean;
   allowFeedback?: boolean;
 }
 
-export default function AgendaRoleView({ tourName, tourDestination, tourDates, tourType, tourId, days, role, onClose, embedded, allowFeedback }: Props) {
+export default function AgendaRoleView({ tourName, tourDestination, tourDates, tourType, tourId, days, role, onClose, onFeedbackAdded, embedded, allowFeedback }: Props) {
   const vis = DEFAULT_VISIBILITY[role] as Record<string, boolean>;
   const roleInfo = ROLES[role];
   const roleLabel = getRoleLabel(role, tourType);
@@ -30,16 +30,16 @@ export default function AgendaRoleView({ tourName, tourDestination, tourDates, t
   const [fbSentiment, setFbSentiment] = useState("😊");
   const [fbText, setFbText] = useState("");
 
-  async function submitFeedback(itemId: string) {
-    if (tourId && !isDemoMode()) {
-      const supabase = createClient();
-      await supabase.from("agenda_feedback").insert({
+  function submitFeedback(itemId: string) {
+    if (tourId) {
+      const feedback = insertRow("agenda_feedback", {
         item_id: itemId,
         tour_id: tourId,
         role,
         sentiment: fbSentiment as FeedbackSentiment,
         text: fbText || null,
       });
+      onFeedbackAdded?.(feedback);
     }
     setSubmitted(prev => [...prev, itemId]);
     setFeedbackOpen(null);

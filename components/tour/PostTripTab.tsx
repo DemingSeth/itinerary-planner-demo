@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { BRAND, ROLES, getRoleLabel } from "@/lib/helpers";
-import { isDemoMode, fakeId } from "@/lib/demoMode";
+import { insertRow, updateRow, getGeneration } from "@/lib/demo-store";
 import { Tex, Btn } from "@/components/tour/ui";
 import type { TourRow, PostTripRow, AgendaDayWithItems } from "@/lib/types";
 
@@ -25,7 +24,6 @@ interface Props {
 }
 
 export default function PostTripTab({ tour, days, initialPostTrip }: Props) {
-  const [postTrip, setPostTrip] = useState<PostTripRow | null>(initialPostTrip);
   const [draft, setDraft] = useState<Partial<PostTripRow>>(initialPostTrip ?? {});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -37,40 +35,49 @@ export default function PostTripTab({ tour, days, initialPostTrip }: Props) {
     )
   );
 
-  const persist = useCallback(async (patch: Partial<PostTripRow>) => {
+  // Refs keep the debounced save and the unmount flush pointed at the latest row.
+  const postTripId = useRef<string | null>(initialPostTrip?.id ?? null);
+  const pending = useRef<Partial<PostTripRow>>({});
+  const generation = useRef(getGeneration());
+
+  const persist = useCallback((patch: Partial<PostTripRow>) => {
     setSaving(true);
-    if (isDemoMode()) {
-      if (!postTrip?.id) {
-        const fakeData = { id: fakeId(), tour_id: tour.id, completed: false, ...patch, updated_at: new Date().toISOString() } as PostTripRow;
-        setPostTrip(fakeData);
-      }
-      setSaving(false);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
-      return;
-    }
-    const supabase = createClient();
-    if (postTrip?.id) {
-      await supabase.from("post_trip").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", postTrip.id);
+    if (postTripId.current) {
+      updateRow("post_trip", postTripId.current, { ...patch, updated_at: new Date().toISOString() });
     } else {
-      const { data } = await supabase.from("post_trip").insert({ tour_id: tour.id, completed: false, ...patch }).select().single();
-      if (data) setPostTrip(data);
+      postTripId.current = insertRow("post_trip", { tour_id: tour.id, completed: false, ...patch }).id;
     }
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
-  }, [postTrip, tour.id]);
+  }, [tour.id]);
+
+  const flush = useCallback(() => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = null;
+    const patch = pending.current;
+    pending.current = {};
+    // Drop edits made before a demo reset.
+    if (generation.current !== getGeneration()) return;
+    if (Object.keys(patch).length) persist(patch);
+  }, [persist]);
+
+  // Save edits still waiting on the debounce when the tab is switched or left.
+  const flushRef = useRef(flush);
+  useEffect(() => { flushRef.current = flush; }, [flush]);
+  useEffect(() => () => flushRef.current(), []);
 
   function update(patch: Partial<PostTripRow>) {
     setDraft(p => ({ ...p, ...patch }));
+    pending.current = { ...pending.current, ...patch };
     if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => persist(patch), 1200);
+    saveTimer.current = setTimeout(flush, 1200);
   }
 
   async function toggleComplete() {
     const next = !draft.completed;
     update({ completed: next });
-    await persist({ ...draft, completed: next });
+    flush();
   }
 
   const isComplete = draft.completed ?? false;

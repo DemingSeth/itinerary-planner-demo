@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { BRAND, STATUSES } from "@/lib/helpers";
-import { isDemoMode } from "@/lib/demoMode";
+import { updateRow } from "@/lib/demo-store";
 import StatusPill from "@/components/shared/StatusPill";
 import OverviewTab from "@/components/tour/OverviewTab";
 import InfinityLogoImg from "@/components/shared/InfinityLogoImg";
@@ -54,18 +53,12 @@ export default function TourDetailClient({ tour: initialTour, initialMembers, in
   const [members, setMembers] = useState(initialMembers);
   const [days, setDays] = useState(initialDays);
   const [tab, setTab] = useState("overview");
-  const [saving, setSaving] = useState(false);
 
   const isOwner = tour.tour_host_id === currentUserId;
 
-  async function handleTourChange(patch: Record<string, any>) {
-    const optimistic = { ...tour, ...patch };
-    setTour(optimistic);
-    if (isDemoMode()) return;
-    setSaving(true);
-    const supabase = createClient();
-    await supabase.from("tours").update(patch).eq("id", tour.id);
-    setSaving(false);
+  function handleTourChange(patch: Record<string, any>) {
+    setTour({ ...tour, ...patch });
+    updateRow("tours", tour.id, patch);
   }
 
   return (
@@ -87,7 +80,6 @@ export default function TourDetailClient({ tour: initialTour, initialMembers, in
               {tour.name}
             </h2>
             <StatusPill status={tour.status} />
-            {saving && <span style={{ fontSize: 11, color: "#94a3b8" }}>Saving...</span>}
           </div>
           <div style={{ color: "#64748b", fontSize: 12, marginTop: 3 }}>
             {tour.school}{tour.destination ? ` · ${tour.destination}` : ""}{tour.dates ? ` · ${tour.dates}` : ""}

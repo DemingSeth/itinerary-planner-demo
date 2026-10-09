@@ -1,36 +1,26 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Itinerary Planner demo
 
-## Getting Started
+The public Itinerary Planner demo linked from aileverageautomation.com/planner-demo. It is a [Next.js](https://nextjs.org) app with no backend: all data is bundled with the app.
 
-First, run the development server:
+## Getting started
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). There is no sign-in and no environment variables to set; everyone uses the single demo host.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## How the data works
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `data/demo/*.json` holds the seed data, one JSON array per table, with the original IDs and relationships.
+- `lib/demo-data.ts` exposes typed query functions over that data, returning the same nested shapes the components use (for example, a tour with its host and members).
+- `lib/demo-store.ts` is the in-browser store. Edits made in the demo (new tours, roster changes, agenda edits, post-trip notes, feedback) are saved to `sessionStorage`, so they survive navigation within a visit and reset when the tab closes. The "Reset demo" control clears them immediately. Nothing is shared between visitors.
 
-## Learn More
+To change the seed data, edit the JSON files in `data/demo/`.
 
-To learn more about Next.js, take a look at the following resources:
+`docs/` keeps the SQL schema and seed from the database the demo used to run on, for reference only.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Deploy
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Deployed on Vercel as the `itinerary-planner-demo` project. Pull requests get a preview deployment; merging to `main` deploys production.

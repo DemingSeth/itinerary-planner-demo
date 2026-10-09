@@ -1,50 +1,49 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useDemoMode, setDemoMode } from "@/lib/demoMode";
+import { useState } from "react";
+import { resetDemo } from "@/lib/demo-store";
 
 export default function DemoModeBanner() {
-  const isDemo = useDemoMode();
-  const router = useRouter();
+  const [justReset, setJustReset] = useState(false);
 
-  if (!isDemo) return null;
-
-  function handleExit() {
-    setDemoMode(false);
-    router.push("/login");
+  function handleReset() {
+    resetDemo();
+    setJustReset(true);
+    setTimeout(() => setJustReset(false), 2000);
   }
 
   return (
     <div style={{
-      background: "#FF6B6B",
-      color: "#fff",
-      padding: "7px 20px",
+      background: "#f1f5f9",
+      borderBottom: "1px solid #e2e8f0",
+      color: "#64748b",
+      padding: "5px 24px",
       display: "flex",
       alignItems: "center",
-      justifyContent: "space-between",
-      fontSize: 13,
-      fontWeight: 600,
+      justifyContent: "center",
+      gap: 12,
+      fontSize: 12,
       fontFamily: "'IBM Plex Sans', sans-serif",
       flexShrink: 0,
-      zIndex: 50,
+      flexWrap: "wrap",
     }}>
-      <span>Demo Mode — Changes are not saved. Refresh to reset.</span>
+      <span>Demo mode: changes reset when you close this tab.</span>
       <button
-        onClick={handleExit}
+        onClick={handleReset}
         style={{
-          background: "rgba(0,0,0,0.18)",
-          color: "#fff",
-          border: "1px solid rgba(255,255,255,0.35)",
+          background: "#fff",
+          color: "#475569",
+          border: "1px solid #e2e8f0",
           borderRadius: 6,
-          padding: "3px 12px",
-          fontSize: 12,
+          padding: "2px 10px",
+          fontSize: 11,
           fontWeight: 600,
           cursor: "pointer",
           fontFamily: "inherit",
           whiteSpace: "nowrap",
         }}
       >
-        Exit Demo
+        {justReset ? "Demo reset" : "Reset demo"}
       </button>
     </div>
   );

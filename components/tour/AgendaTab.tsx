@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
-import { isDemoMode, fakeId } from "@/lib/demoMode";
+import { insertRow, insertRows, updateRow, deleteRow } from "@/lib/demo-store";
 import TypeDot from "@/components/shared/TypeDot";
 import {
   BRAND, ROLES, AGENDA_TYPES, TRAVEL_METHODS,
@@ -12,7 +11,7 @@ import {
 import AgendaRoleView from "@/components/tour/AgendaRoleView";
 import type {
   TourRow, AgendaDayWithItems, AgendaItemWithFeedback,
-  AgendaItemType, TravelMethod, MealPayType, Role,
+  AgendaItemType, TravelMethod, MealPayType, Role, FeedbackSentiment,
 } from "@/lib/types";
 
 // ── Icons ──────────────────────────────────────────────────────────────────────
@@ -551,7 +550,7 @@ export default function AgendaTab({ tour, days, onDaysChange, onTourChange }: Ag
   }
 
   // ── day mutations ─────────────────────────────────────────────────────────────
-  async function addDay() {
+  function addDay() {
     if (!newDayDate) return;
     const startDate = parseAgendaDate(newDayDate);
     if (!startDate) { alert("Please enter a valid date like Apr 14 or Apr 14, 2026"); return; }
@@ -561,69 +560,41 @@ export default function AgendaTab({ tour, days, onDaysChange, onTourChange }: Ag
       d.setDate(d.getDate() + i);
       return { tour_id: tour.id, day_number: days.length + i + 1, date: formatAgendaDate(d), collapsed: false, sort_order: days.length + i + 1 };
     });
-    if (isDemoMode()) {
-      const fakeRows = inserts.map(ins => ({ ...ins, id: fakeId() }));
-      onDaysChange([...days, ...fakeRows.map(r => ({ ...r, agenda_items: [] as AgendaItemWithFeedback[] }))]);
-      setNewDayDate("");
-      setShowAddDay(false);
-      return;
-    }
-    const supabase = createClient();
-    const { data } = await supabase.from("agenda_days").insert(inserts).select();
-    if (data) onDaysChange([...days, ...data.map(r => ({ ...r, agenda_items: [] as AgendaItemWithFeedback[] }))]);
+    const data = insertRows("agenda_days", inserts);
+    onDaysChange([...days, ...data.map(r => ({ ...r, agenda_items: [] as AgendaItemWithFeedback[] }))]);
     setNewDayDate("");
     setShowAddDay(false);
   }
 
-  async function removeDay(dayId: string) {
-    if (!isDemoMode()) {
-      const supabase = createClient();
-      await supabase.from("agenda_days").delete().eq("id", dayId);
-    }
+  function removeDay(dayId: string) {
+    deleteRow("agenda_days", dayId);
     onDaysChange(days.filter(d => d.id !== dayId));
   }
 
-  async function toggleCollapsed(dayId: string) {
+  function toggleCollapsed(dayId: string) {
     const day = days.find(d => d.id === dayId);
     if (!day) return;
-    if (!isDemoMode()) {
-      const supabase = createClient();
-      await supabase.from("agenda_days").update({ collapsed: !day.collapsed }).eq("id", dayId);
-    }
+    updateRow("agenda_days", dayId, { collapsed: !day.collapsed });
     onDaysChange(days.map(d => d.id === dayId ? { ...d, collapsed: !d.collapsed } : d));
   }
 
   // ── item mutations ────────────────────────────────────────────────────────────
-  async function saveItem(dayId: string) {
+  function saveItem(dayId: string) {
     if (!itemForm.title.trim()) return;
     setSaving(true);
     const day = days.find(d => d.id === dayId);
-    if (isDemoMode()) {
-      const fakeData = { ...formToInsert(itemForm, dayId, (day?.agenda_items.length ?? 0) + 1), id: fakeId(), agenda_feedback: [] as AgendaItemWithFeedback["agenda_feedback"] };
-      onDaysChange(days.map(d => d.id === dayId ? { ...d, agenda_items: [...d.agenda_items, fakeData as AgendaItemWithFeedback] } : d));
-      setItemForm(BLANK);
-      setAddingItem(null);
-      setSaving(false);
-      return;
-    }
-    const supabase = createClient();
-    const { data } = await supabase.from("agenda_items")
-      .insert(formToInsert(itemForm, dayId, (day?.agenda_items.length ?? 0) + 1))
-      .select().single();
-    if (data) onDaysChange(days.map(d => d.id === dayId ? { ...d, agenda_items: [...d.agenda_items, { ...data, agenda_feedback: [] }] } : d));
+    const data = insertRow("agenda_items", formToInsert(itemForm, dayId, (day?.agenda_items.length ?? 0) + 1));
+    onDaysChange(days.map(d => d.id === dayId ? { ...d, agenda_items: [...d.agenda_items, { ...data, agenda_feedback: [] }] } : d));
     setItemForm(BLANK);
     setAddingItem(null);
     setSaving(false);
   }
 
-  async function updateItem() {
+  function updateItem() {
     if (!editCtx || !editForm.title.trim()) return;
     setSaving(true);
     const { day_id, tour_id, sort_order, ...patch } = formToInsert(editForm, editCtx.dayId, 0);
-    if (!isDemoMode()) {
-      const supabase = createClient();
-      await supabase.from("agenda_items").update(patch).eq("id", editCtx.itemId);
-    }
+    updateRow("agenda_items", editCtx.itemId, patch);
     onDaysChange(days.map(d => d.id === editCtx.dayId ? {
       ...d, agenda_items: d.agenda_items.map(i => i.id === editCtx.itemId ? { ...i, ...patch } : i),
     } : d));
@@ -631,39 +602,23 @@ export default function AgendaTab({ tour, days, onDaysChange, onTourChange }: Ag
     setSaving(false);
   }
 
-  async function removeItem(dayId: string, itemId: string) {
-    if (!isDemoMode()) {
-      const supabase = createClient();
-      await supabase.from("agenda_items").delete().eq("id", itemId);
-    }
+  function removeItem(dayId: string, itemId: string) {
+    deleteRow("agenda_items", itemId);
     onDaysChange(days.map(d => d.id === dayId ? { ...d, agenda_items: d.agenda_items.filter(i => i.id !== itemId) } : d));
   }
 
-  async function toggleCostPaid(dayId: string, item: AgendaItemWithFeedback) {
-    if (!isDemoMode()) {
-      const supabase = createClient();
-      await supabase.from("agenda_items").update({ cost_paid: !item.cost_paid }).eq("id", item.id);
-    }
+  function toggleCostPaid(dayId: string, item: AgendaItemWithFeedback) {
+    updateRow("agenda_items", item.id, { cost_paid: !item.cost_paid });
     onDaysChange(days.map(d => d.id === dayId ? { ...d, agenda_items: d.agenda_items.map(i => i.id === item.id ? { ...i, cost_paid: !i.cost_paid } : i) } : d));
   }
 
-  async function addFeedback(dayId: string, itemId: string, text: string, role: string, sentiment: string) {
-    if (isDemoMode()) {
-      const fakeData = { id: fakeId(), item_id: itemId, tour_id: tour.id, role, sentiment: sentiment as import("@/lib/types").FeedbackSentiment, text: text || null, submitted_at: new Date().toISOString() };
-      onDaysChange(days.map(d => d.id === dayId ? {
-        ...d, agenda_items: d.agenda_items.map(i => i.id === itemId ? { ...i, agenda_feedback: [...(i.agenda_feedback || []), fakeData] } : i),
-      } : d));
-      return;
-    }
-    const supabase = createClient();
-    const { data } = await supabase.from("agenda_feedback").insert({
-      item_id: itemId, tour_id: tour.id, role, sentiment, text: text || null,
-    }).select().single();
-    if (data) {
-      onDaysChange(days.map(d => d.id === dayId ? {
-        ...d, agenda_items: d.agenda_items.map(i => i.id === itemId ? { ...i, agenda_feedback: [...(i.agenda_feedback || []), data] } : i),
-      } : d));
-    }
+  function addFeedback(dayId: string, itemId: string, text: string, role: string, sentiment: string) {
+    const data = insertRow("agenda_feedback", {
+      item_id: itemId, tour_id: tour.id, role, sentiment: sentiment as FeedbackSentiment, text: text || null,
+    });
+    onDaysChange(days.map(d => d.id === dayId ? {
+      ...d, agenda_items: d.agenda_items.map(i => i.id === itemId ? { ...i, agenda_feedback: [...(i.agenda_feedback || []), data] } : i),
+    } : d));
   }
 
   // ── render ────────────────────────────────────────────────────────────────────
@@ -678,6 +633,9 @@ export default function AgendaTab({ tour, days, onDaysChange, onTourChange }: Ag
         days={days}
         role={previewRole}
         onClose={() => setPreviewRole(null)}
+        onFeedbackAdded={fb => onDaysChange(days.map(d => ({
+          ...d, agenda_items: d.agenda_items.map(i => i.id === fb.item_id ? { ...i, agenda_feedback: [...(i.agenda_feedback || []), fb] } : i),
+        })))}
         embedded
         allowFeedback
       />

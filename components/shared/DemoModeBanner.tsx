@@ -27,7 +27,7 @@ export default function DemoModeBanner() {
       flexShrink: 0,
       flexWrap: "wrap",
     }}>
-      <span>Demo mode: changes reset when you close this tab.</span>
+      <span>Demo mode: your changes are saved in this browser.</span>
       <button
         onClick={handleReset}
         style={{

@@ -6,7 +6,7 @@
     "type": "teacher",
     "gender": "male",
     "waiver": true,
-    "notes": "Band Director - scarter@lincolnhs.edu",
+    "notes": "Band Director - scarter@example.com",
     "sort_order": 1,
     "attendance_status": "pending"
   },

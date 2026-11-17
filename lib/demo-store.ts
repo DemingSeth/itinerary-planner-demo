@@ -1,11 +1,12 @@
 // In-browser demo store. Starts from the bundled JSON and keeps every demo
-// edit in sessionStorage, so changes survive navigation within a visit and
-// disappear when the tab closes. Nothing is ever shared between visitors.
+// edit in localStorage, so changes survive reloads and return visits until
+// the visitor hits Reset demo. If storage is blocked, edits live in memory for
+// the page view. Nothing is ever shared between visitors.
 
 import { useSyncExternalStore } from "react";
 import { BASE_DB, type DemoDb, type TableName, type RowOf } from "@/lib/demo-data";
 
-const STORAGE_KEY = "planner_demo_db_v1";
+const STORAGE_KEY = "planner_demo_db_v2";
 
 export interface DemoState {
   db: DemoDb;
@@ -21,7 +22,7 @@ function ensureLoaded() {
   if (loaded) return;
   loaded = true;
   try {
-    const raw = sessionStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) state = { db: { ...BASE_DB, ...JSON.parse(raw) }, generation: 0 };
   } catch {
     // Storage unavailable or corrupt: fall back to the seed data.
@@ -35,7 +36,7 @@ function emit() {
 function commit(db: DemoDb) {
   state = { ...state, db };
   try {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
   } catch {
     // Storage full or blocked: edits still apply for this page view.
   }
@@ -57,7 +58,7 @@ function getServerSnapshot(): DemoState | null {
 }
 
 // Null during server render and hydration, so callers render a placeholder
-// instead of seed data that could flash before session edits apply.
+// instead of seed data that could flash before saved edits apply.
 export function useDemoState(): DemoState | null {
   return useSyncExternalStore<DemoState | null>(subscribe, getSnapshot, getServerSnapshot);
 }
@@ -72,7 +73,7 @@ export function getGeneration(): number {
 
 export function resetDemo() {
   try {
-    sessionStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(STORAGE_KEY);
   } catch {
     // Nothing to clear.
   }
@@ -131,7 +132,9 @@ export function insertRow<T extends TableName>(table: T, row: Insert<T>): RowOf<
 export function updateRow<T extends TableName>(table: T, id: string, patch: Partial<RowOf<T>>) {
   ensureLoaded();
   const rows = state.db[table] as RowOf<T>[];
-  commit({ ...state.db, [table]: rows.map(r => (r.id === id ? { ...r, ...patch } : r)) });
+  // Mirrors the tours_updated_at trigger from the original schema.
+  const stamp = table === "tours" ? { updated_at: now() } : {};
+  commit({ ...state.db, [table]: rows.map(r => (r.id === id ? { ...r, ...patch, ...stamp } : r)) });
 }
 
 // Deletes a row and its dependents, matching the schema's ON DELETE CASCADE.

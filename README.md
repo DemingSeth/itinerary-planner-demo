@@ -15,7 +15,7 @@ Open [http://localhost:3000](http://localhost:3000). There is no sign-in and no 
 
 - `data/demo/*.json` holds the seed data, one JSON array per table, with the original IDs and relationships.
 - `lib/demo-data.ts` exposes typed query functions over that data, returning the same nested shapes the components use (for example, a tour with its host and members).
-- `lib/demo-store.ts` is the in-browser store. Edits made in the demo (new tours, roster changes, agenda edits, post-trip notes, feedback) are saved to `sessionStorage`, so they survive navigation within a visit and reset when the tab closes. The "Reset demo" control clears them immediately. Nothing is shared between visitors.
+- `lib/demo-store.ts` is the in-browser store. Edits made in the demo (new tours, roster changes, agenda edits, post-trip notes, feedback) are saved to `localStorage`, so they survive reloads and return visits. The "Reset demo" control clears them and reloads the seed. If storage is blocked, edits stay in memory for the page view. Nothing is shared between visitors.
 
 To change the seed data, edit the JSON files in `data/demo/`.
 

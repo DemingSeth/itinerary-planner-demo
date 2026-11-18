@@ -2,32 +2,18 @@
 
 import { useRouter } from "next/navigation";
 import type { TourHostRow } from "@/lib/types";
-import { createClient } from "@/lib/supabase/client";
 import { BRAND } from "@/lib/helpers";
 import DemoModeBanner from "@/components/shared/DemoModeBanner";
 
-interface ShellUser {
-  id: string;
-  email?: string | null;
-}
-
 interface Props {
   children: React.ReactNode;
-  user: ShellUser;
   tourHost: TourHostRow | null;
 }
 
-export default function DashboardShell({ children, user, tourHost }: Props) {
+export default function DashboardShell({ children, tourHost }: Props) {
   const router = useRouter();
   const initials = tourHost?.initials ||
-    (tourHost?.name || user.email || "TH").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
-
-  async function handleSignOut() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/login");
-    router.refresh();
-  }
+    (tourHost?.name || "TH").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8fafc", display: "flex", flexDirection: "column" }}>
@@ -61,24 +47,9 @@ export default function DashboardShell({ children, user, tourHost }: Props) {
               {initials}
             </div>
             <span style={{ color: "rgba(255,255,255,0.8)", fontSize: 13 }}>
-              {tourHost?.name || user.email}
+              {tourHost?.name}
             </span>
           </div>
-          <button
-            onClick={handleSignOut}
-            style={{
-              background: "rgba(255,255,255,0.1)",
-              border: "1px solid rgba(255,255,255,0.15)",
-              color: "rgba(255,255,255,0.7)",
-              borderRadius: 6,
-              padding: "5px 12px",
-              fontSize: 12,
-              cursor: "pointer",
-              fontFamily: "inherit",
-            }}
-          >
-            Sign out
-          </button>
         </div>
       </header>
 

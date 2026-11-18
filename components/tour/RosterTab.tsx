@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { BRAND, MEMBER_TYPES, ATTENDANCE_STATUSES, calcRoster, calcRooms, getMemberLabel, getMemberTypeOptions, getStatusColor } from "@/lib/helpers";
-import { isDemoMode, fakeId } from "@/lib/demoMode";
+import { insertRow, insertRows, updateRow, deleteRow } from "@/lib/demo-store";
 import { I, INP, Field, Inp, Tex, Sel, Btn, Modal } from "@/components/tour/ui";
 import type { TourRow, TourMemberRow, AttendanceStatus } from "@/lib/types";
 
@@ -43,34 +42,25 @@ export default function RosterTab({ tour, members, onMembersChange }: Props) {
 
   const pendingWaivers = members.filter(m => m.type === "student" && !m.waiver).length;
 
-  async function addMember() {
+  function addMember() {
     if (!form.name.trim()) return;
     setSaving(true);
-    if (isDemoMode()) {
-      const fakeData = { id: fakeId(), tour_id: tour.id, name: form.name.trim(), type: form.type, gender: form.gender, waiver: form.waiver, notes: form.notes || null, sort_order: members.length + 1, attendance_status: "pending" as const } as TourMemberRow;
-      onMembersChange([...members, fakeData]);
-      setForm({ name: "", type: "student", gender: "female", waiver: false, notes: "" });
-      setShowAdd(false);
-      setSaving(false);
-      return;
-    }
-    const supabase = createClient();
-    const { data } = await supabase.from("tour_members").insert({
+    const data = insertRow("tour_members", {
       tour_id: tour.id,
       name: form.name.trim(),
-      type: form.type,
+      type: form.type as TourMemberRow["type"],
       gender: form.gender,
       waiver: form.waiver,
       notes: form.notes || null,
       sort_order: members.length + 1,
-    }).select().single();
-    if (data) onMembersChange([...members, data]);
+    });
+    onMembersChange([...members, data]);
     setForm({ name: "", type: "student", gender: "female", waiver: false, notes: "" });
     setShowAdd(false);
     setSaving(false);
   }
 
-  async function importCsv() {
+  function importCsv() {
     const lines = csvText.trim().split("\n").filter(Boolean);
     if (!lines.length) return;
     setSaving(true);
@@ -86,44 +76,26 @@ export default function RosterTab({ tour, members, onMembersChange }: Props) {
         sort_order: members.length + i + 1,
       };
     }).filter(r => r.name);
-    if (isDemoMode()) {
-      const fakeData = inserts.map(ins => ({ ...ins, id: fakeId(), attendance_status: "pending" as const })) as TourMemberRow[];
-      onMembersChange([...members, ...fakeData]);
-      setCsvText("");
-      setShowCsv(false);
-      setSaving(false);
-      return;
-    }
-    const supabase = createClient();
-    const { data } = await supabase.from("tour_members").insert(inserts).select();
-    if (data) onMembersChange([...members, ...data]);
+    const data = insertRows("tour_members", inserts);
+    onMembersChange([...members, ...data]);
     setCsvText("");
     setShowCsv(false);
     setSaving(false);
   }
 
-  async function updateStatus(member: TourMemberRow, status: string) {
-    if (!isDemoMode()) {
-      const supabase = createClient();
-      await supabase.from("tour_members").update({ attendance_status: status }).eq("id", member.id);
-    }
+  function updateStatus(member: TourMemberRow, status: string) {
+    updateRow("tour_members", member.id, { attendance_status: status as AttendanceStatus });
     onMembersChange(members.map(m => m.id === member.id ? { ...m, attendance_status: status as AttendanceStatus } : m));
     setOpenStatusFor(null);
   }
 
-  async function toggleWaiver(member: TourMemberRow) {
-    if (!isDemoMode()) {
-      const supabase = createClient();
-      await supabase.from("tour_members").update({ waiver: !member.waiver }).eq("id", member.id);
-    }
+  function toggleWaiver(member: TourMemberRow) {
+    updateRow("tour_members", member.id, { waiver: !member.waiver });
     onMembersChange(members.map(m => m.id === member.id ? { ...m, waiver: !m.waiver } : m));
   }
 
-  async function removeMember(id: string) {
-    if (!isDemoMode()) {
-      const supabase = createClient();
-      await supabase.from("tour_members").delete().eq("id", id);
-    }
+  function removeMember(id: string) {
+    deleteRow("tour_members", id);
     onMembersChange(members.filter(m => m.id !== id));
   }
 

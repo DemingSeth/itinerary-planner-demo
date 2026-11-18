@@ -4,9 +4,11 @@ import { useState } from "react";
 import AgendaRoleView from "@/components/tour/AgendaRoleView";
 import InfinityLogoImg from "@/components/shared/InfinityLogoImg";
 import { BRAND, ROLES, getRoleLabel } from "@/lib/helpers";
+import { getTourRow, getAgendaDays } from "@/lib/demo-data";
+import { useDemoDb } from "@/lib/demo-store";
 import type { AgendaDayWithItems, Role, AccessCodes } from "@/lib/types";
 
-interface Props {
+interface ViewProps {
   tourId: string;
   tourName: string;
   tourDestination: string | null;
@@ -23,7 +25,39 @@ const ROLE_DESCRIPTIONS: Record<string, string> = {
   coordinator: "Full coordinator access",
 };
 
-export default function PublicTourViewClient({ tourId, tourName, tourDestination, tourDates, tourType, accessCodes, days }: Props) {
+export default function PublicTourViewClient({ tourId }: { tourId: string }) {
+  const db = useDemoDb();
+  if (!db) return null;
+
+  const tour = getTourRow(db, tourId);
+  if (!tour) {
+    return (
+      <div style={{ minHeight: "100vh", background: BRAND.navy, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 14, padding: 20 }}>
+        This tour is not available.
+      </div>
+    );
+  }
+
+  // Shared view: feedback is shown only in the coordinator dashboard.
+  const days = getAgendaDays(db, tourId).map(day => ({
+    ...day,
+    agenda_items: day.agenda_items.map(item => ({ ...item, agenda_feedback: [] })),
+  }));
+
+  return (
+    <PublicTourView
+      tourId={tourId}
+      tourName={tour.name}
+      tourDestination={tour.destination}
+      tourDates={tour.dates}
+      tourType={tour.tour_type}
+      accessCodes={tour.access_codes}
+      days={days}
+    />
+  );
+}
+
+function PublicTourView({ tourId, tourName, tourDestination, tourDates, tourType, accessCodes, days }: ViewProps) {
   const roleOptions = (["teacher", "driver", "student", "coordinator"] as Role[]).map(r => ({
     role: r,
     label: getRoleLabel(r, tourType),
